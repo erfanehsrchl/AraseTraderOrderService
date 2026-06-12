@@ -2,9 +2,11 @@ using Application.Interfaces;
 using Infrastructure.Caching;
 using Infrastructure.ExternalServices;
 using Infrastructure.Jobs;
+using Infrastructure.Mappings;
 using Infrastructure.Messaging;
 using Infrastructure.Persistence;
 using Infrastructure.Services;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,8 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        TypeAdapterConfig.GlobalSettings.Scan(typeof(ServiceMappingConfig).Assembly);
+
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 
@@ -80,6 +84,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICustomerSyncService, CustomerSyncService>();
         services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<CustomerSyncJob>();
         services.AddScoped<ProcessPendingOrdersJob>();
         services.AddHostedService<CreateOrderEventConsumer>();

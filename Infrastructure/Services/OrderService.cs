@@ -3,6 +3,7 @@ using Application.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
@@ -20,18 +21,13 @@ public class OrderService : IOrderService
     public async Task<AddOrderOutDto> AddOrderAsync(AddOrderInDto input, CancellationToken cancellationToken)
     {
         var existingOrder = await _dbContext.Orders
+            .AsNoTracking()
             .Where(order => order.TrackingId == input.TrackingId)
-            .Select(order => new AddOrderOutDto
-            {
-                TrackingId = order.TrackingId,
-                Status = order.Status,
-                Message = OrderRegisteredMessage
-            })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingOrder is not null)
         {
-            return existingOrder;
+            return existingOrder.Adapt<AddOrderOutDto>();
         }
 
         var customerExists = await _dbContext.Customers
@@ -43,25 +39,14 @@ public class OrderService : IOrderService
         }
 
         var now = DateTime.UtcNow;
-        var order = new Order
-        {
-            TrackingId = input.TrackingId,
-            CustomerId = input.CustomerId,
-            Side = input.Side,
-            Amount = input.Amount,
-            Status = OrderStatus.Pending,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+        var order = input.Adapt<Order>();
+        order.Status = OrderStatus.Pending;
+        order.CreatedAt = now;
+        order.UpdatedAt = now;
 
         _dbContext.Orders.Add(order);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new AddOrderOutDto
-        {
-            TrackingId = order.TrackingId,
-            Status = order.Status,
-            Message = OrderRegisteredMessage
-        };
+        return order.Adapt<AddOrderOutDto>();
     }
 }

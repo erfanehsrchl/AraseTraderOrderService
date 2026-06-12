@@ -1,7 +1,8 @@
 using System.Text.Json;
 using Application.DTOs.Orders;
 using Application.Interfaces;
-using Application.Messaging.Orders;
+using Contracts.Events;
+using Mapster;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -144,13 +145,7 @@ public class CreateOrderEventConsumer : BackgroundService
 
             await using var scope = _serviceScopeFactory.CreateAsyncScope();
             var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
-            var input = new AddOrderInDto
-            {
-                TrackingId = message.TrackingId,
-                CustomerId = message.CustomerId,
-                Side = message.Side,
-                Amount = message.Amount
-            };
+            var input = message.Adapt<AddOrderInDto>();
 
             await orderService.AddOrderAsync(input, CancellationToken.None);
             await channel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);

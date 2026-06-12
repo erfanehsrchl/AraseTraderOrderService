@@ -1,4 +1,5 @@
 using Application;
+using Api.GrpcServices;
 using Api.Mappings;
 using Api.Validators.Orders;
 using FluentValidation;
@@ -8,6 +9,7 @@ using Hangfire.PostgreSql;
 using Infrastructure;
 using Infrastructure.Jobs;
 using Mapster;
+using ProtoBuf.Grpc.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,7 @@ builder.Services.AddHangfire(configuration => configuration
     .UseRecommendedSerializerSettings()
     .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(defaultConnection)));
 builder.Services.AddHangfireServer();
+builder.Services.AddCodeFirstGrpc();
 builder.Services.AddControllers();
 builder.Services.AddFluentValidationAutoValidation(options =>
 {
@@ -59,5 +62,6 @@ app.Services.GetRequiredService<IRecurringJobManager>()
     .RegisterRecurringJobs(app.Configuration);
 
 app.MapControllers();
+app.MapGrpcService<WalletGrpcService>();
 
 app.Run();
