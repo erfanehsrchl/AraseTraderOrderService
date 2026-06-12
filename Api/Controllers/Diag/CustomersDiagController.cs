@@ -1,5 +1,7 @@
 using Api.Constants;
 using Api.ViewModels.Customers;
+using Application.Interfaces;
+using Mapster;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers.Diag;
@@ -8,12 +10,18 @@ namespace Api.Controllers.Diag;
 [Route(DiagCustomerRoutes.Base)]
 public class CustomersDiagController : ControllerBase
 {
-    [HttpPost(DiagCustomerRoutes.Sync)]
-    public ActionResult<SyncCustomersOutVm> SyncCustomers()
+    private readonly ICustomerSyncService _customerSyncService;
+
+    public CustomersDiagController(ICustomerSyncService customerSyncService)
     {
-        return Ok(new SyncCustomersOutVm
-        {
-            Message = "Placeholder implementation."
-        });
+        _customerSyncService = customerSyncService;
+    }
+
+    [HttpPost(DiagCustomerRoutes.Sync)]
+    public async Task<ActionResult<SyncCustomersOutVm>> SyncCustomers(CancellationToken cancellationToken)
+    {
+        var result = await _customerSyncService.SyncAsync(cancellationToken);
+
+        return Ok(result.Adapt<SyncCustomersOutVm>());
     }
 }

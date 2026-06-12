@@ -1,6 +1,6 @@
-namespace Api.ViewModels.Customers;
+namespace Application.DTOs.Customers;
 
-public class SyncCustomersOutVm
+public class CustomerSyncOutDto
 {
     public int InsertedCount { get; set; }
     public int UpdatedCount { get; set; }
