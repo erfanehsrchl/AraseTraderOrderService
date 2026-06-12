@@ -1,6 +1,7 @@
 using Api.Constants;
 using Api.ViewModels.Orders;
 using Application.DTOs.Orders;
+using Application.Interfaces;
 using Domain.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
@@ -11,18 +12,20 @@ namespace Api.Controllers.Diag;
 [Route(DiagOrderRoutes.Base)]
 public class OrdersDiagController : ControllerBase
 {
+    private readonly IOrderService _orderService;
+
+    public OrdersDiagController(IOrderService orderService)
+    {
+        _orderService = orderService;
+    }
+
     [HttpPost(DiagOrderRoutes.Add)]
-    public ActionResult<AddOrderOutVm> AddOrder(AddOrderInVm request)
+    public async Task<ActionResult<AddOrderOutVm>> AddOrder(
+        AddOrderInVm request,
+        CancellationToken cancellationToken)
     {
         var input = request.Adapt<AddOrderInDto>();
-        _ = input;
-
-        var output = new AddOrderOutDto
-        {
-            TrackingId = Guid.Empty,
-            Status = OrderStatus.Pending,
-            Message = "Placeholder implementation."
-        };
+        var output = await _orderService.AddOrderAsync(input, cancellationToken);
 
         return Ok(output.Adapt<AddOrderOutVm>());
     }

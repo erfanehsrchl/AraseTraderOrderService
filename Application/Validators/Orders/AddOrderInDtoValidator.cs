@@ -7,9 +7,13 @@ public class AddOrderInDtoValidator : AbstractValidator<AddOrderInDto>
 {
     public AddOrderInDtoValidator()
     {
+        RuleFor(order => order.TrackingId)
+            .NotEmpty()
+            .WithMessage("TrackingId is required.");
+
         RuleFor(order => order.CustomerId)
             .GreaterThan(0)
-            .WithMessage("CustomerId must be greater than 0.");
+            .WithMessage("CustomerId must be greater than zero.");
 
         RuleFor(order => order.Side)
             .IsInEnum()
@@ -17,6 +21,6 @@ public class AddOrderInDtoValidator : AbstractValidator<AddOrderInDto>
 
         RuleFor(order => order.Amount)
             .GreaterThan(0)
-            .WithMessage("Amount must be greater than 0.");
+            .WithMessage("Amount must be greater than zero.");
     }
 }

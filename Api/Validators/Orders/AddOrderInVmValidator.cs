@@ -7,6 +7,10 @@ public class AddOrderInVmValidator : AbstractValidator<AddOrderInVm>
 {
     public AddOrderInVmValidator()
     {
+        RuleFor(order => order.TrackingId)
+            .NotEmpty()
+            .WithMessage("TrackingId is required.");
+
         RuleFor(order => order.CustomerId)
             .GreaterThan(0)
             .WithMessage("CustomerId must be greater than zero.");

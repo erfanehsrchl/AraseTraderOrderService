@@ -76,6 +76,7 @@ public static class DependencyInjection
                 policyBuilder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
         services.AddScoped<ICustomerSyncService, CustomerSyncService>();
+        services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<CustomerSyncJob>();
         services.AddScoped<ProcessPendingOrdersJob>();
 
