@@ -24,7 +24,7 @@ public class AraseAuthTokenClient : IAraseAuthTokenClient
         _options = options.Value;
     }
 
-    public async Task<AraseAuthToken> GetTokenAsync(CancellationToken cancellationToken = default)
+    public async Task<AraseAuthToken> GetTokenAsync(CancellationToken cancellationToken)
     {
         var cachedToken = await GetCachedTokenAsync(cancellationToken);
         if (cachedToken is not null && cachedToken.IsValid)

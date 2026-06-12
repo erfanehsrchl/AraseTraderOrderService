@@ -17,7 +17,7 @@ public class AraseCustomerClient : IAraseCustomerClient
         _authTokenClient = authTokenClient;
     }
 
-    public async Task<IReadOnlyCollection<AraseCustomerDto>> GetCustomersAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<AraseCustomerDto>> GetCustomersAsync(CancellationToken cancellationToken)
     {
         var token = await _authTokenClient.GetTokenAsync(cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/customers");

@@ -4,5 +4,5 @@ namespace Application.Interfaces;
 
 public interface ICustomerSyncService
 {
-    Task<CustomerSyncOutDto> SyncAsync(CancellationToken cancellationToken = default);
+    Task<CustomerSyncOutDto> SyncAsync(CancellationToken cancellationToken);
 }

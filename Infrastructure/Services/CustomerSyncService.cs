@@ -20,7 +20,7 @@ public class CustomerSyncService : ICustomerSyncService
         _customerClient = customerClient;
     }
 
-    public async Task<CustomerSyncOutDto> SyncAsync(CancellationToken cancellationToken = default)
+    public async Task<CustomerSyncOutDto> SyncAsync(CancellationToken cancellationToken)
     {
         var externalCustomers = await _customerClient.GetCustomersAsync(cancellationToken);
         var nationalCodes = externalCustomers

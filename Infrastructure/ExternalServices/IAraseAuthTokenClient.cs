@@ -4,5 +4,5 @@ namespace Infrastructure.ExternalServices;
 
 public interface IAraseAuthTokenClient
 {
-    Task<AraseAuthToken> GetTokenAsync(CancellationToken cancellationToken = default);
+    Task<AraseAuthToken> GetTokenAsync(CancellationToken cancellationToken);
 }
