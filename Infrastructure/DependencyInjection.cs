@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
+using RedLockNet.SERedis;
+using RedLockNet.SERedis.Configuration;
+using StackExchange.Redis;
 
 namespace Infrastructure;
 
@@ -39,6 +42,14 @@ public static class DependencyInjection
         {
             options.Configuration = redisConnectionString;
         });
+        services.AddSingleton<IConnectionMultiplexer>(_ =>
+            ConnectionMultiplexer.Connect(redisConnectionString));
+        services.AddSingleton(serviceProvider =>
+            RedLockFactory.Create(new[]
+            {
+                new RedLockMultiplexer(serviceProvider.GetRequiredService<IConnectionMultiplexer>())
+            }));
+        services.AddScoped<IDistributedLockService, RedLockDistributedLockService>();
 
         services.AddHttpClient<IAraseAuthTokenClient, AraseAuthTokenClient>((serviceProvider, httpClient) =>
             {
