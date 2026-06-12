@@ -1,6 +1,7 @@
 using Application.Interfaces;
 using Infrastructure.Caching;
 using Infrastructure.ExternalServices;
+using Infrastructure.Jobs;
 using Infrastructure.Persistence;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -62,6 +63,7 @@ public static class DependencyInjection
                 policyBuilder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
         services.AddScoped<ICustomerSyncService, CustomerSyncService>();
+        services.AddScoped<CustomerSyncJob>();
 
         return services;
     }

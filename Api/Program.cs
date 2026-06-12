@@ -3,7 +3,10 @@ using Api.Mappings;
 using Api.Validators.Orders;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Infrastructure;
+using Infrastructure.Jobs;
 using Mapster;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +15,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
+
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(defaultConnection)));
+builder.Services.AddHangfireServer();
 builder.Services.AddControllers();
 builder.Services.AddFluentValidationAutoValidation(options =>
 {
@@ -28,6 +40,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+var hangfireOptions = app.Configuration.GetSection(HangfireOptions.SectionName).Get<HangfireOptions>()
+    ?? new HangfireOptions();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -39,6 +53,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+app.UseHangfireDashboard(hangfireOptions.DashboardPath);
+app.Services.GetRequiredService<IRecurringJobManager>()
+    .RegisterRecurringJobs(app.Configuration);
 
 app.MapControllers();
 
