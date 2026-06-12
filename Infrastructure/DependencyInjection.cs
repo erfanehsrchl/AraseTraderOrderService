@@ -1,4 +1,5 @@
 using Application.Interfaces;
+using Infrastructure.Caching;
 using Infrastructure.ExternalServices;
 using Infrastructure.Persistence;
 using Infrastructure.Services;
@@ -23,7 +24,20 @@ public static class DependencyInjection
 
         services.Configure<AraseExternalApiOptions>(
             configuration.GetSection(AraseExternalApiOptions.SectionName));
-        services.AddMemoryCache();
+
+        var redisConnectionString = configuration.GetSection(RedisOptions.SectionName)
+            .Get<RedisOptions>()?
+            .ConnectionString;
+
+        if (string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            throw new InvalidOperationException("Redis connection string was not found.");
+        }
+
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnectionString;
+        });
 
         services.AddHttpClient<IAraseAuthTokenClient, AraseAuthTokenClient>((serviceProvider, httpClient) =>
             {

@@ -1,43 +1,44 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Infrastructure.ExternalServices.Models;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.ExternalServices;
 
 public class AraseAuthTokenClient : IAraseAuthTokenClient
 {
-    private const string TokenCacheKey = "AraseExternalApi:AuthToken";
+    private const string TokenCacheKey = "arase:external-api:access-token";
+    private static readonly TimeSpan MaxTokenCacheTtl = TimeSpan.FromMinutes(55);
     private readonly HttpClient _httpClient;
-    private readonly IMemoryCache _memoryCache;
+    private readonly IDistributedCache _cache;
     private readonly AraseExternalApiOptions _options;
 
     public AraseAuthTokenClient(
         HttpClient httpClient,
-        IMemoryCache memoryCache,
+        IDistributedCache cache,
         IOptions<AraseExternalApiOptions> options)
     {
         _httpClient = httpClient;
-        _memoryCache = memoryCache;
+        _cache = cache;
         _options = options.Value;
     }
 
     public async Task<AraseAuthToken> GetTokenAsync(CancellationToken cancellationToken = default)
     {
-        if (_memoryCache.TryGetValue(TokenCacheKey, out AraseAuthToken? cachedToken) &&
-            cachedToken is not null &&
-            cachedToken.IsValid)
+        var cachedToken = await GetCachedTokenAsync(cancellationToken);
+        if (cachedToken is not null && cachedToken.IsValid)
         {
             var refreshedToken = await RefreshTokenAsync(cachedToken, cancellationToken);
             if (refreshedToken is not null)
             {
-                CacheToken(refreshedToken);
+                await CacheTokenAsync(refreshedToken, cancellationToken);
                 return refreshedToken;
             }
         }
 
         var token = await RequestTokenAsync(cancellationToken);
-        CacheToken(token);
+        await CacheTokenAsync(token, cancellationToken);
         return token;
     }
 
@@ -83,14 +84,49 @@ public class AraseAuthTokenClient : IAraseAuthTokenClient
         }
     }
 
-    private void CacheToken(AraseAuthToken token)
+    private async Task<AraseAuthToken?> GetCachedTokenAsync(CancellationToken cancellationToken)
     {
-        var expiresIn = token.ExpiresAt - DateTime.UtcNow;
-        if (expiresIn <= TimeSpan.Zero)
+        var cachedToken = await _cache.GetStringAsync(TokenCacheKey, cancellationToken);
+        if (string.IsNullOrWhiteSpace(cachedToken))
         {
-            expiresIn = TimeSpan.FromMinutes(5);
+            return null;
         }
 
-        _memoryCache.Set(TokenCacheKey, token, expiresIn);
+        try
+        {
+            return JsonSerializer.Deserialize<AraseAuthToken>(cachedToken);
+        }
+        catch (JsonException)
+        {
+            await _cache.RemoveAsync(TokenCacheKey, cancellationToken);
+            return null;
+        }
+    }
+
+    private async Task CacheTokenAsync(AraseAuthToken token, CancellationToken cancellationToken)
+    {
+        var ttl = GetCacheTtl(token);
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = ttl
+        };
+
+        await _cache.SetStringAsync(
+            TokenCacheKey,
+            JsonSerializer.Serialize(token),
+            cacheOptions,
+            cancellationToken);
+    }
+
+    private static TimeSpan GetCacheTtl(AraseAuthToken token)
+    {
+        var tokenLifetime = token.ExpiresAt - DateTime.UtcNow;
+        if (tokenLifetime <= TimeSpan.FromMinutes(1))
+        {
+            return TimeSpan.FromMinutes(5);
+        }
+
+        var ttl = tokenLifetime - TimeSpan.FromMinutes(1);
+        return ttl < MaxTokenCacheTtl ? ttl : MaxTokenCacheTtl;
     }
 }
