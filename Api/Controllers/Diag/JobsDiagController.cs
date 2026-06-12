@@ -1,5 +1,7 @@
 using Api.Constants;
 using Api.ViewModels.Jobs;
+using Infrastructure.Jobs;
+using Mapster;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers.Diag;
@@ -8,12 +10,18 @@ namespace Api.Controllers.Diag;
 [Route(DiagJobRoutes.Base)]
 public class JobsDiagController : ControllerBase
 {
-    [HttpPost(DiagJobRoutes.ProcessPendingOrders)]
-    public ActionResult<ProcessPendingOrdersOutVm> ProcessPendingOrders()
+    private readonly ProcessPendingOrdersJob _processPendingOrdersJob;
+
+    public JobsDiagController(ProcessPendingOrdersJob processPendingOrdersJob)
     {
-        return Ok(new ProcessPendingOrdersOutVm
-        {
-            Message = "Placeholder implementation."
-        });
+        _processPendingOrdersJob = processPendingOrdersJob;
+    }
+
+    [HttpPost(DiagJobRoutes.ProcessPendingOrders)]
+    public async Task<ActionResult<ProcessPendingOrdersOutVm>> ProcessPendingOrders(CancellationToken cancellationToken)
+    {
+        var result = await _processPendingOrdersJob.RunAsync(cancellationToken);
+
+        return Ok(result.Adapt<ProcessPendingOrdersOutVm>());
     }
 }

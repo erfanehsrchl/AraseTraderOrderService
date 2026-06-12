@@ -28,6 +28,8 @@ public static class DependencyInjection
 
         services.Configure<AraseExternalApiOptions>(
             configuration.GetSection(AraseExternalApiOptions.SectionName));
+        services.Configure<HangfireOptions>(
+            configuration.GetSection(HangfireOptions.SectionName));
 
         var redisConnectionString = configuration.GetSection(RedisOptions.SectionName)
             .Get<RedisOptions>()?
@@ -75,6 +77,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICustomerSyncService, CustomerSyncService>();
         services.AddScoped<CustomerSyncJob>();
+        services.AddScoped<ProcessPendingOrdersJob>();
 
         return services;
     }

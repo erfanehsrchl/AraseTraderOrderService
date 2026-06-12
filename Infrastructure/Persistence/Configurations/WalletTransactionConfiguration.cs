@@ -18,7 +18,9 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
         builder.Property(transaction => transaction.Reason).IsRequired();
         builder.Property(transaction => transaction.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
 
-        builder.HasIndex(transaction => transaction.OrderId).IsUnique();
+        builder.HasIndex(transaction => transaction.OrderId)
+            .IsUnique()
+            .HasFilter("\"OrderId\" IS NOT NULL");
 
         builder.HasOne(transaction => transaction.Wallet)
             .WithMany(wallet => wallet.Transactions)

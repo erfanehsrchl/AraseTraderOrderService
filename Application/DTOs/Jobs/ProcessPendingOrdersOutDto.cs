@@ -1,6 +1,6 @@
-namespace Api.ViewModels.Jobs;
+namespace Application.DTOs.Jobs;
 
-public class ProcessPendingOrdersOutVm
+public class ProcessPendingOrdersOutDto
 {
     public int ProcessedCount { get; set; }
     public int FailedCount { get; set; }

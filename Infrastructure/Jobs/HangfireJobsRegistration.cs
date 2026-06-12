@@ -6,6 +6,7 @@ namespace Infrastructure.Jobs;
 public static class HangfireJobsRegistration
 {
     public const string CustomerSyncDailyJobId = "customer-sync-daily";
+    public const string ProcessPendingOrdersJobId = "process-pending-orders";
 
     public static void RegisterRecurringJobs(
         this IRecurringJobManager recurringJobManager,
@@ -18,6 +19,15 @@ public static class HangfireJobsRegistration
             CustomerSyncDailyJobId,
             job => job.RunAsync(CancellationToken.None),
             options.CustomerSyncCron,
+            new RecurringJobOptions
+            {
+                TimeZone = ResolveTimeZone(options.TimeZoneId)
+            });
+
+        recurringJobManager.AddOrUpdate<ProcessPendingOrdersJob>(
+            ProcessPendingOrdersJobId,
+            job => job.RunAsync(CancellationToken.None),
+            options.ProcessPendingOrdersCron,
             new RecurringJobOptions
             {
                 TimeZone = ResolveTimeZone(options.TimeZoneId)

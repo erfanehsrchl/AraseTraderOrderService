@@ -30,9 +30,16 @@ public class CustomerSyncService : ICustomerSyncService
             .ToArray();
 
         var existingCustomers = await _dbContext.Customers
-            .Include(customer => customer.Wallet)
             .Where(customer => nationalCodes.Contains(customer.NationalCode))
             .ToDictionaryAsync(customer => customer.NationalCode, cancellationToken);
+        var existingCustomerIds = existingCustomers.Values
+            .Select(customer => customer.Id)
+            .ToArray();
+        var customerIdsWithWalletList = await _dbContext.Wallets
+            .Where(wallet => existingCustomerIds.Contains(wallet.CustomerId))
+            .Select(wallet => wallet.CustomerId)
+            .ToListAsync(cancellationToken);
+        var customerIdsWithWallet = customerIdsWithWalletList.ToHashSet();
 
         var now = DateTime.UtcNow;
         var insertedCount = 0;
@@ -46,9 +53,10 @@ public class CustomerSyncService : ICustomerSyncService
                 UpdateCustomer(customer, externalCustomer, now);
                 updatedCount++;
 
-                if (customer.Wallet is null)
+                if (!customerIdsWithWallet.Contains(customer.Id))
                 {
-                    customer.Wallet = CreateWallet(now);
+                    _dbContext.Wallets.Add(CreateWallet(customer.Id, now));
+                    customerIdsWithWallet.Add(customer.Id);
                     walletCreatedCount++;
                 }
 
@@ -108,5 +116,13 @@ public class CustomerSyncService : ICustomerSyncService
             CreatedAt = now,
             UpdatedAt = now
         };
+    }
+
+    private static Wallet CreateWallet(long customerId, DateTime now)
+    {
+        var wallet = CreateWallet(now);
+        wallet.CustomerId = customerId;
+
+        return wallet;
     }
 }
