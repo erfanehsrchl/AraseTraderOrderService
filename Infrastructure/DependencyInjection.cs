@@ -2,6 +2,7 @@ using Application.Interfaces;
 using Infrastructure.Caching;
 using Infrastructure.ExternalServices;
 using Infrastructure.Jobs;
+using Infrastructure.Messaging;
 using Infrastructure.Persistence;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,8 @@ public static class DependencyInjection
             configuration.GetSection(AraseExternalApiOptions.SectionName));
         services.Configure<HangfireOptions>(
             configuration.GetSection(HangfireOptions.SectionName));
+        services.Configure<RabbitMqOptions>(
+            configuration.GetSection(RabbitMqOptions.SectionName));
 
         var redisConnectionString = configuration.GetSection(RedisOptions.SectionName)
             .Get<RedisOptions>()?
@@ -79,6 +82,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<CustomerSyncJob>();
         services.AddScoped<ProcessPendingOrdersJob>();
+        services.AddHostedService<CreateOrderEventConsumer>();
 
         return services;
     }
