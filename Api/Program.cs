@@ -27,6 +27,7 @@ builder.Services.AddHangfire(configuration => configuration
     .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(defaultConnection)));
 builder.Services.AddHangfireServer();
 builder.Services.AddCodeFirstGrpc();
+builder.Services.AddGrpcReflection();
 builder.Services.AddControllers();
 builder.Services.AddFluentValidationAutoValidation(options =>
 {
@@ -63,5 +64,9 @@ app.Services.GetRequiredService<IRecurringJobManager>()
 
 app.MapControllers();
 app.MapGrpcService<WalletGrpcService>();
+if (app.Environment.IsDevelopment())
+{
+    app.MapGrpcReflectionService();
+}
 
 app.Run();

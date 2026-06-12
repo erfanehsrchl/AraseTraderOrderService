@@ -1,17 +1,17 @@
 using System.ServiceModel;
 using Contracts.Grpc.Models;
 
-namespace Contracts.Grpc;
+namespace Contracts.Grpc.Wallet;
 
-[ServiceContract]
+[ServiceContract(Name = WalletGrpcConstants.ServiceName)]
 public interface IWalletGrpcService
 {
-    [OperationContract]
+    [OperationContract(Name = WalletGrpcConstants.GetWalletByCustomerId)]
     Task<GetWalletByCustomerIdGrpcResponse> GetWalletByCustomerIdAsync(
         GetWalletByCustomerIdGrpcRequest request,
         CancellationToken cancellationToken);
 
-    [OperationContract]
+    [OperationContract(Name = WalletGrpcConstants.GetWalletTransactionsByWalletId)]
     Task<GetWalletTransactionsByWalletIdGrpcResponse> GetWalletTransactionsByWalletIdAsync(
         GetWalletTransactionsByWalletIdGrpcRequest request,
         CancellationToken cancellationToken);

@@ -1,6 +1,6 @@
 using Application.Interfaces;
-using Contracts.Grpc;
 using Contracts.Grpc.Models;
+using Contracts.Grpc.Wallet;
 using Grpc.Core;
 using Mapster;
 
