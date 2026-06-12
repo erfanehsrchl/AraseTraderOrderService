@@ -1,8 +1,8 @@
 namespace Infrastructure.ExternalServices.Models;
 
-public class AuthTokenRequest
+public class ExternalAuthTokenRequest
 {
-    public AuthTokenRequest(string username, string password)
+    public ExternalAuthTokenRequest(string username, string password)
     {
         Username = username;
         Password = password;
