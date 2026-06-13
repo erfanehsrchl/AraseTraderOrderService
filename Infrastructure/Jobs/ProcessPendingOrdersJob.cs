@@ -28,6 +28,7 @@ public class ProcessPendingOrdersJob
     public async Task<ProcessPendingOrdersOutDto> RunAsync(CancellationToken cancellationToken)
     {
         var pendingOrderIds = await _dbContext.Orders
+            .AsNoTracking()
             .Where(order => order.Status == OrderStatus.Pending)
             .OrderBy(order => order.CreatedAt)
             .Select(order => order.Id)
@@ -36,50 +37,52 @@ public class ProcessPendingOrdersJob
 
         var result = new ProcessPendingOrdersOutDto();
 
+        if (pendingOrderIds.Count == 0)
+        {
+            result.Message = "No pending orders found.";
+            return result;
+        }
+
         foreach (var orderId in pendingOrderIds)
         {
             var processResult = await ProcessOrderAsync(orderId, cancellationToken);
-            switch (processResult)
-            {
-                case OrderProcessResult.Processed:
-                    result.ProcessedCount++;
-                    break;
-                case OrderProcessResult.Failed:
-                    result.FailedCount++;
-                    break;
-                case OrderProcessResult.Skipped:
-                    result.SkippedCount++;
-                    break;
-            }
+            ApplyProcessResult(result, processResult);
         }
 
         result.Message = "Pending orders processing completed.";
         return result;
     }
 
-    private async Task<OrderProcessResult> ProcessOrderAsync(long orderId, CancellationToken cancellationToken)
+    private static void ApplyProcessResult(
+        ProcessPendingOrdersOutDto result,
+        OrderProcessResult processResult)
     {
-        var orderWallet = await (
-                    from orderEntity in _dbContext.Orders.AsNoTracking()
-                    join customerWallet in _dbContext.Wallets.AsNoTracking()
-                        on orderEntity.CustomerId equals customerWallet.CustomerId
-                    where orderEntity.Id == orderId
-                    select new
-                    {
-                        orderEntity.Id,
-                        orderEntity.Status,
-                        WalletId = customerWallet.Id
-                    }
-                ).FirstOrDefaultAsync(cancellationToken);
-
-        if (orderWallet is null ||
-            orderWallet.Status != OrderStatus.Pending ||
-            orderWallet.WalletId == 0)
+        switch (processResult)
         {
-            return OrderProcessResult.Skipped;
-        }
+            case OrderProcessResult.Processed:
+                result.ProcessedCount++;
+                break;
 
-        var lockResource = $"wallet:{orderWallet.WalletId}";
+            case OrderProcessResult.Failed:
+                result.FailedCount++;
+                break;
+
+            case OrderProcessResult.Skipped:
+                result.SkippedCount++;
+                break;
+        }
+    }
+
+    private async Task<OrderProcessResult> ProcessOrderAsync(
+    long orderId,
+    CancellationToken cancellationToken)
+    {
+        var walletId = await GetPendingOrderWalletIdAsync(orderId, cancellationToken);
+
+        if (walletId is null)
+            return OrderProcessResult.Skipped;
+
+        var lockResource = $"wallet:{walletId}";
         var lockExpiry = TimeSpan.FromSeconds(_options.WalletLockExpirySeconds);
 
         await using var distributedLock = await _distributedLockService.TryAcquireAsync(
@@ -88,79 +91,54 @@ public class ProcessPendingOrdersJob
             cancellationToken);
 
         if (distributedLock is null || !distributedLock.IsAcquired)
-        {
             return OrderProcessResult.Skipped;
-        }
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         try
         {
             var order = await _dbContext.Orders
-                .FirstOrDefaultAsync(currentOrder => currentOrder.Id == orderId, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == orderId, cancellationToken);
 
             if (order is null || order.Status != OrderStatus.Pending)
-            {
-                await transaction.RollbackAsync(cancellationToken);
                 return OrderProcessResult.Skipped;
-            }
 
             var wallet = await _dbContext.Wallets
-                .FirstOrDefaultAsync(currentWallet => currentWallet.CustomerId == order.CustomerId, cancellationToken);
+                .FirstOrDefaultAsync(x => x.CustomerId == order.CustomerId, cancellationToken);
 
             if (wallet is null)
-            {
-                await transaction.RollbackAsync(cancellationToken);
                 return OrderProcessResult.Skipped;
-            }
 
             var now = DateTime.UtcNow;
-            var existingTransaction = await _dbContext.WalletTransactions
-                .AnyAsync(walletTransaction => walletTransaction.OrderId == order.Id, cancellationToken);
 
-            if (existingTransaction)
+            var alreadyProcessed = await _dbContext.WalletTransactions
+                .AnyAsync(x => x.OrderId == order.Id, cancellationToken);
+
+            if (alreadyProcessed)
             {
-                order.Status = OrderStatus.Processed;
-                order.UpdatedAt = now;
+                MarkOrderAsProcessed(order, now);
+
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
+
                 return OrderProcessResult.Skipped;
             }
 
             if (order.Side == OrderSide.Buy && wallet.Balance < order.Amount)
             {
-                order.Status = OrderStatus.Failed;
-                order.FailureReason = "Insufficient wallet balance.";
-                order.UpdatedAt = now;
+                MarkOrderAsFailed(order, "Insufficient wallet balance.", now);
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
+
                 return OrderProcessResult.Failed;
             }
 
-            var signedAmount = order.Side == OrderSide.Buy ? -order.Amount : order.Amount;
-            var balanceBefore = wallet.Balance;
-            var balanceAfter = balanceBefore + signedAmount;
-
-            wallet.Balance = balanceAfter;
-            wallet.UpdatedAt = now;
-            order.Status = OrderStatus.Processed;
-            order.UpdatedAt = now;
-            order.FailureReason = null;
-
-            _dbContext.WalletTransactions.Add(new WalletTransaction
-            {
-                WalletId = wallet.Id,
-                OrderId = order.Id,
-                Amount = signedAmount,
-                BalanceBefore = balanceBefore,
-                BalanceAfter = balanceAfter,
-                Reason = order.Side == OrderSide.Buy ? WalletTransactionReason.OrderBuy : WalletTransactionReason.OrderSell,
-                CreatedAt = now
-            });
+            ApplyWalletTransaction(order, wallet, now);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+
             return OrderProcessResult.Processed;
         }
         catch
@@ -168,5 +146,61 @@ public class ProcessPendingOrdersJob
             await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
+    }
+
+    private async Task<long?> GetPendingOrderWalletIdAsync(
+         long orderId,
+         CancellationToken cancellationToken)
+    {
+        return await (
+            from order in _dbContext.Orders.AsNoTracking()
+            join wallet in _dbContext.Wallets.AsNoTracking()
+                on order.CustomerId equals wallet.CustomerId
+            where order.Id == orderId &&
+                  order.Status == OrderStatus.Pending
+            select (long?)wallet.Id
+        ).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private static void MarkOrderAsProcessed(Order order, DateTime now)
+    {
+        order.Status = OrderStatus.Processed;
+        order.UpdatedAt = now;
+        order.FailureReason = null;
+    }
+
+    private static void MarkOrderAsFailed(Order order, string reason, DateTime now)
+    {
+        order.Status = OrderStatus.Failed;
+        order.FailureReason = reason;
+        order.UpdatedAt = now;
+    }
+
+    private void ApplyWalletTransaction(Order order, Wallet wallet, DateTime now)
+    {
+        var signedAmount = order.Side == OrderSide.Buy
+            ? -order.Amount
+            : order.Amount;
+
+        var balanceBefore = wallet.Balance;
+        var balanceAfter = balanceBefore + signedAmount;
+
+        wallet.Balance = balanceAfter;
+        wallet.UpdatedAt = now;
+
+        MarkOrderAsProcessed(order, now);
+
+        _dbContext.WalletTransactions.Add(new WalletTransaction
+        {
+            WalletId = wallet.Id,
+            OrderId = order.Id,
+            Amount = signedAmount,
+            BalanceBefore = balanceBefore,
+            BalanceAfter = balanceAfter,
+            Reason = order.Side == OrderSide.Buy
+                ? WalletTransactionReason.OrderBuy
+                : WalletTransactionReason.OrderSell,
+            CreatedAt = now
+        });
     }
 }

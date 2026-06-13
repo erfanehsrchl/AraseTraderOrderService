@@ -33,13 +33,16 @@ public class CustomerSyncService : ICustomerSyncService
         var existingCustomers = await _dbContext.Customers
             .Where(customer => nationalCodes.Contains(customer.NationalCode))
             .ToDictionaryAsync(customer => customer.NationalCode, cancellationToken);
+
         var existingCustomerIds = existingCustomers.Values
             .Select(customer => customer.Id)
             .ToArray();
+
         var customerIdsWithWalletList = await _dbContext.Wallets
             .Where(wallet => existingCustomerIds.Contains(wallet.CustomerId))
             .Select(wallet => wallet.CustomerId)
             .ToListAsync(cancellationToken);
+
         var customerIdsWithWallet = customerIdsWithWalletList.ToHashSet();
 
         var now = DateTime.UtcNow;
@@ -49,7 +52,6 @@ public class CustomerSyncService : ICustomerSyncService
 
         foreach (var externalCustomer in externalCustomers.Where(customer => !string.IsNullOrWhiteSpace(customer.NationalCode)))
         {
-            var koft = externalCustomer.BirthDate.Kind;
             if (existingCustomers.TryGetValue(externalCustomer.NationalCode, out var customer))
             {
                 UpdateCustomer(customer, externalCustomer, now);
