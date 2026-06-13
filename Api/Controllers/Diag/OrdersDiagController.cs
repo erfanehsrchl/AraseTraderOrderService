@@ -2,7 +2,6 @@ using Api.Constants;
 using Api.ViewModels.Orders;
 using Application.DTOs.Orders;
 using Application.Interfaces;
-using Domain.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,15 +30,21 @@ public class OrdersDiagController : ControllerBase
     }
 
     [HttpGet(DiagOrderRoutes.GetByTrackingId)]
-    public ActionResult<AddOrderOutVm> GetOrder(Guid trackingId)
+    public async Task<ActionResult<GetOrderByTrackingIdOutVm>> GetOrder(
+        Guid trackingId,
+        CancellationToken cancellationToken)
     {
-        var output = new AddOrderOutDto
+        try
         {
-            TrackingId = trackingId,
-            Status = OrderStatus.Pending,
-            Message = "Placeholder implementation."
-        };
+            var output = await _orderService.GetOrderByTrackingIdAsync(
+                trackingId,
+                cancellationToken);
 
-        return Ok(output.Adapt<AddOrderOutVm>());
+            return Ok(output.Adapt<GetOrderByTrackingIdOutVm>());
+        }
+        catch (InvalidOperationException exception)
+        {
+            return NotFound(exception.Message);
+        }
     }
 }

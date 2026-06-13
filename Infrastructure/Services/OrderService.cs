@@ -49,4 +49,21 @@ public class OrderService : IOrderService
 
         return order.Adapt<AddOrderOutDto>();
     }
+
+    public async Task<GetOrderByTrackingIdOutDto> GetOrderByTrackingIdAsync(
+        Guid trackingId,
+        CancellationToken cancellationToken)
+    {
+        var order = await _dbContext.Orders
+            .AsNoTracking()
+            .Where(order => order.TrackingId == trackingId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (order is null)
+        {
+            throw new InvalidOperationException("Order was not found.");
+        }
+
+        return order.Adapt<GetOrderByTrackingIdOutDto>();
+    }
 }

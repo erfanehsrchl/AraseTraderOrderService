@@ -1,5 +1,5 @@
 using Application;
-using Api.GrpcServices;
+using Api.Extensions;
 using Api.Mappings;
 using Api.Validators.Orders;
 using FluentValidation;
@@ -63,7 +63,7 @@ app.Services.GetRequiredService<IRecurringJobManager>()
     .RegisterRecurringJobs(app.Configuration);
 
 app.MapControllers();
-app.MapGrpcService<WalletGrpcService>();
+app.MapApiGrpcServices();
 if (app.Environment.IsDevelopment())
 {
     app.MapGrpcReflectionService();
