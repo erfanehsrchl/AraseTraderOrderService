@@ -10,6 +10,7 @@ using Infrastructure;
 using Infrastructure.Jobs;
 using Mapster;
 using ProtoBuf.Grpc.Server;
+using Api.GrpcServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,7 +64,9 @@ app.Services.GetRequiredService<IRecurringJobManager>()
     .RegisterRecurringJobs(app.Configuration);
 
 app.MapControllers();
-app.MapApiGrpcServices();
+app.MapGrpcService<OrderGrpcService>();
+app.MapGrpcService<WalletGrpcService>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapGrpcReflectionService();
