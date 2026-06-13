@@ -1,6 +1,7 @@
 using Application.Interfaces;
 using Infrastructure.Caching;
 using Infrastructure.ExternalServices;
+using Infrastructure.ExternalServices.Models;
 using Infrastructure.Jobs;
 using Infrastructure.Mappings;
 using Infrastructure.Messaging;

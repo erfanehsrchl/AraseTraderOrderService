@@ -1,4 +1,4 @@
-namespace Infrastructure.ExternalServices;
+namespace Infrastructure.ExternalServices.Models;
 
 public class AraseExternalApiOptions
 {

@@ -29,8 +29,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="ExternalServices\" />
-  </ItemGroup>
-
 </Project>

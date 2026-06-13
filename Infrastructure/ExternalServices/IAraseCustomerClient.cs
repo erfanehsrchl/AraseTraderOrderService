@@ -1,3 +1,5 @@
+using Infrastructure.ExternalServices.Models;
+
 namespace Infrastructure.ExternalServices;
 
 public interface IAraseCustomerClient

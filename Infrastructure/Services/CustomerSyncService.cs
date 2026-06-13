@@ -2,6 +2,7 @@ using Application.DTOs.Customers;
 using Application.Interfaces;
 using Domain.Entities;
 using Infrastructure.ExternalServices;
+using Infrastructure.ExternalServices.Models;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,6 +49,7 @@ public class CustomerSyncService : ICustomerSyncService
 
         foreach (var externalCustomer in externalCustomers.Where(customer => !string.IsNullOrWhiteSpace(customer.NationalCode)))
         {
+            var koft = externalCustomer.BirthDate.Kind;
             if (existingCustomers.TryGetValue(externalCustomer.NationalCode, out var customer))
             {
                 UpdateCustomer(customer, externalCustomer, now);
@@ -102,7 +104,7 @@ public class CustomerSyncService : ICustomerSyncService
         customer.FatherName = source.FatherName;
         customer.BirthCertificationNumber = source.BirthCertificationNumber;
         customer.RegistrationNumber = source.RegistrationNumber;
-        customer.BirthDate = source.BirthDate;
+        customer.BirthDate = DateTime.SpecifyKind(source.BirthDate, DateTimeKind.Utc);
         customer.BranchName = source.BranchName;
         customer.MobileNumber = source.MobileNumber;
         customer.UpdatedAt = now;
