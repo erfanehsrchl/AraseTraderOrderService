@@ -12,4 +12,7 @@ public class RabbitMqOptions
     public string CreateOrderExchangeName { get; set; } = "arase.orders";
     public string CreateOrderQueueName { get; set; } = "arase.order.create";
     public string CreateOrderRoutingKey { get; set; } = "order.create";
+    public string CreateOrderDeadLetterExchangeName { get; set; } = "arase.orders.dlx";
+    public string CreateOrderDeadLetterQueueName { get; set; } = "arase.order.create.dlq";
+    public string CreateOrderDeadLetterRoutingKey { get; set; } = "order.create.dead";
 }

@@ -1,7 +1,7 @@
-using Application;
-using Api.Extensions;
+using Api.GrpcServices;
 using Api.Mappings;
 using Api.Validators.Orders;
+using Application;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Hangfire;
@@ -10,7 +10,6 @@ using Infrastructure;
 using Infrastructure.Jobs;
 using Mapster;
 using ProtoBuf.Grpc.Server;
-using Api.GrpcServices;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -52,14 +52,23 @@ public class CreateOrderEventConsumer : BackgroundService
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_channel is not null)
+        try
         {
-            await _channel.CloseAsync(cancellationToken);
-        }
+            if (_channel is not null)
+            {
+                await _channel.CloseAsync(cancellationToken);
+                await _channel.DisposeAsync();
+            }
 
-        if (_connection is not null)
+            if (_connection is not null)
+            {
+                await _connection.CloseAsync(cancellationToken);
+                await _connection.DisposeAsync();
+            }
+        }
+        catch (Exception exception)
         {
-            await _connection.CloseAsync(cancellationToken);
+            _logger.LogWarning(exception, "Error while closing RabbitMQ create order consumer resources.");
         }
 
         await base.StopAsync(cancellationToken);
@@ -93,11 +102,38 @@ public class CreateOrderEventConsumer : BackgroundService
             autoDelete: false,
             cancellationToken: cancellationToken);
 
+        await channel.ExchangeDeclareAsync(
+            _options.CreateOrderDeadLetterExchangeName,
+            ExchangeType.Direct,
+            durable: true,
+            autoDelete: false,
+            cancellationToken: cancellationToken);
+
+        await channel.QueueDeclareAsync(
+            _options.CreateOrderDeadLetterQueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            cancellationToken: cancellationToken);
+
+        await channel.QueueBindAsync(
+            _options.CreateOrderDeadLetterQueueName,
+            _options.CreateOrderDeadLetterExchangeName,
+            _options.CreateOrderDeadLetterRoutingKey,
+            cancellationToken: cancellationToken);
+
+        var queueArguments = new Dictionary<string, object?>
+        {
+            ["x-dead-letter-exchange"] = _options.CreateOrderDeadLetterExchangeName,
+            ["x-dead-letter-routing-key"] = _options.CreateOrderDeadLetterRoutingKey
+        };
+
         await channel.QueueDeclareAsync(
             _options.CreateOrderQueueName,
             durable: true,
             exclusive: false,
             autoDelete: false,
+            arguments: queueArguments,
             cancellationToken: cancellationToken);
 
         await channel.QueueBindAsync(
@@ -117,7 +153,7 @@ public class CreateOrderEventConsumer : BackgroundService
     {
         var channel = GetChannel();
         var consumer = new AsyncEventingBasicConsumer(channel);
-        consumer.ReceivedAsync += ProcessMessageAsync;
+        consumer.ReceivedAsync += (_, eventArgs) => ProcessMessageAsync(eventArgs, cancellationToken);
 
         await channel.BasicConsumeAsync(
             _options.CreateOrderQueueName,
@@ -125,47 +161,66 @@ public class CreateOrderEventConsumer : BackgroundService
             consumer,
             cancellationToken);
 
-        _logger.LogInformation("Create order RabbitMQ consumer started.");
+        _logger.LogInformation(
+            "Create order RabbitMQ consumer started. Queue: {QueueName}, DeadLetterQueue: {DeadLetterQueueName}",
+            _options.CreateOrderQueueName,
+            _options.CreateOrderDeadLetterQueueName);
     }
 
-    private async Task ProcessMessageAsync(object sender, BasicDeliverEventArgs eventArgs)
+    private async Task ProcessMessageAsync(
+        BasicDeliverEventArgs eventArgs,
+        CancellationToken cancellationToken)
     {
         var channel = GetChannel();
 
         try
         {
-            var message = JsonSerializer.Deserialize<CreateOrderEvent>(
-                eventArgs.Body.Span,
-                JsonSerializerOptions);
-
-            if (message is null)
-            {
-                throw new InvalidOperationException("CreateOrderEvent message body was empty or invalid.");
-            }
-
             await using var scope = _serviceScopeFactory.CreateAsyncScope();
             var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
+            var message = DeserializeMessage(eventArgs.Body);
             var input = message.Adapt<AddOrderInDto>();
 
-            await orderService.AddOrderAsync(input, CancellationToken.None);
-            await channel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false);
+            await orderService.AddOrderAsync(input, cancellationToken);
+            await channel.BasicAckAsync(
+                eventArgs.DeliveryTag,
+                multiple: false,
+                cancellationToken);
 
             _logger.LogInformation(
-                "CreateOrderEvent processed successfully. TrackingId: {TrackingId}",
-                message.TrackingId);
+                "CreateOrderEvent processed and ACK sent. TrackingId: {TrackingId}, DeliveryTag: {DeliveryTag}, Redelivered: {Redelivered}",
+                message.TrackingId,
+                eventArgs.DeliveryTag,
+                eventArgs.Redelivered);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "CreateOrderEvent processing cancelled. DeliveryTag: {DeliveryTag}",
+                eventArgs.DeliveryTag);
         }
         catch (Exception exception)
         {
             _logger.LogError(
                 exception,
-                "CreateOrderEvent processing failed. DeliveryTag: {DeliveryTag}",
-                eventArgs.DeliveryTag);
+                "CreateOrderEvent processing failed. NACK will dead-letter the message. DeliveryTag: {DeliveryTag}, Redelivered: {Redelivered}",
+                eventArgs.DeliveryTag,
+                eventArgs.Redelivered);
 
             await channel.BasicNackAsync(
                 eventArgs.DeliveryTag,
                 multiple: false,
-                requeue: true);
+                requeue: false,
+                cancellationToken);
         }
+    }
+
+    private static CreateOrderEvent DeserializeMessage(ReadOnlyMemory<byte> body)
+    {
+        var message = JsonSerializer.Deserialize<CreateOrderEvent>(
+            body.Span,
+            JsonSerializerOptions);
+
+        return message ?? throw new InvalidOperationException("CreateOrderEvent message body was empty or invalid.");
     }
 
     private IChannel GetChannel()
