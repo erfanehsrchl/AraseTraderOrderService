@@ -19,7 +19,7 @@ public class AraseCustomerDto
     [JsonPropertyName("birthCertificationNumber")]
     public string BirthCertificationNumber { get; set; } = string.Empty;
 
-    [JsonPropertyName("registrationNumber")]
+    [JsonPropertyName("registerationNumber")]
     public string RegistrationNumber { get; set; } = string.Empty;
 
     [JsonPropertyName("birthDate")]
