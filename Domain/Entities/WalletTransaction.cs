@@ -2,6 +2,9 @@ using Domain.Enums;
 
 namespace Domain.Entities;
 
+/// <summary>
+/// Represents an immutable wallet ledger entry created by order processing or other wallet balance operations.
+/// </summary>
 public class WalletTransaction
 {
     public long Id { get; set; }

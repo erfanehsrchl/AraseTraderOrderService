@@ -6,6 +6,9 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.ExternalServices;
 
+/// <summary>
+/// Manages external Arase Trader authentication tokens using Redis distributed cache and the provider refresh flow.
+/// </summary>
 public class AraseAuthTokenClient : IAraseAuthTokenClient
 {
     private const string TokenCacheKey = "arase:external-api:access-token";
@@ -24,6 +27,9 @@ public class AraseAuthTokenClient : IAraseAuthTokenClient
         _options = options.Value;
     }
 
+    /// <summary>
+    /// Returns a valid cached or freshly requested access token for Customer Synchronization calls.
+    /// </summary>
     public async Task<CachedExternalAccessToken> GetTokenAsync(CancellationToken cancellationToken)
     {
         var cachedToken = await GetCachedTokenAsync(cancellationToken);

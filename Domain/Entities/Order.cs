@@ -2,6 +2,9 @@ using Domain.Enums;
 
 namespace Domain.Entities;
 
+/// <summary>
+/// Represents a gateway-tracked buy or sell order that is processed asynchronously against the customer's wallet.
+/// </summary>
 public class Order
 {
     public long Id { get; set; }

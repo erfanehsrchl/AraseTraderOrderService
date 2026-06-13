@@ -12,6 +12,9 @@ using RabbitMQ.Client.Events;
 
 namespace Infrastructure.Messaging;
 
+/// <summary>
+/// RabbitMQ background consumer that bridges CreateOrderEvent messages to the order application use case.
+/// </summary>
 public class CreateOrderEventConsumer : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
@@ -50,6 +53,9 @@ public class CreateOrderEventConsumer : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Stops the RabbitMQ consumer and explicitly closes channel and connection resources before disposal.
+    /// </summary>
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         try

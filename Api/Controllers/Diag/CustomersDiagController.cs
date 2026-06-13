@@ -8,6 +8,9 @@ namespace Api.Controllers.Diag;
 
 [ApiController]
 [Route(DiagCustomerRoutes.Base)]
+/// <summary>
+/// Exposes diagnostic operations for customer synchronization from the external Arase Trader service.
+/// </summary>
 public class CustomersDiagController : ControllerBase
 {
     private readonly ICustomerSyncService _customerSyncService;
@@ -17,6 +20,9 @@ public class CustomersDiagController : ControllerBase
         _customerSyncService = customerSyncService;
     }
 
+    /// <summary>
+    /// Runs the customer synchronization use case and reports how many customers and wallets were created or updated.
+    /// </summary>
     [HttpPost(DiagCustomerRoutes.Sync)]
     public async Task<ActionResult<SyncCustomersOutVm>> SyncCustomers(CancellationToken cancellationToken)
     {

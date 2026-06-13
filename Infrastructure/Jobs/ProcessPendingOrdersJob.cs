@@ -8,6 +8,9 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Jobs;
 
+/// <summary>
+/// Hangfire job that processes pending orders in batches and protects wallet updates with distributed locking.
+/// </summary>
 public class ProcessPendingOrdersJob
 {
     private const int BatchSize = 100;
@@ -25,6 +28,9 @@ public class ProcessPendingOrdersJob
         _options = options.Value;
     }
 
+    /// <summary>
+    /// Processes a bounded batch of pending orders and returns operational counts for diagnostics and monitoring.
+    /// </summary>
     public async Task<ProcessPendingOrdersOutDto> RunAsync(CancellationToken cancellationToken)
     {
         var pendingOrderIds = await _dbContext.Orders

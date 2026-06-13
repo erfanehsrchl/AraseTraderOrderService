@@ -6,6 +6,9 @@ using Mapster;
 
 namespace Api.GrpcServices;
 
+/// <summary>
+/// Implements the order gRPC boundary by delegating read requests to the application order service.
+/// </summary>
 public class OrderGrpcService : IOrderGrpcService
 {
     private readonly IOrderService _orderService;
@@ -15,6 +18,9 @@ public class OrderGrpcService : IOrderGrpcService
         _orderService = orderService;
     }
 
+    /// <summary>
+    /// Retrieves an order by tracking identifier for synchronous consumers such as Gateway or support tooling.
+    /// </summary>
     public async Task<GetOrderByTrackingIdGrpcResponse> GetOrderByTrackingIdAsync(
         GetOrderByTrackingIdGrpcRequest request,
         CancellationToken cancellationToken)

@@ -6,6 +6,9 @@ using Mapster;
 
 namespace Api.GrpcServices;
 
+/// <summary>
+/// Implements the wallet gRPC boundary without exposing EF Core entities or persistence details.
+/// </summary>
 public class WalletGrpcService : IWalletGrpcService
 {
     private readonly IWalletService _walletService;
@@ -16,6 +19,9 @@ public class WalletGrpcService : IWalletGrpcService
         _walletService = walletService;
     }
 
+    /// <summary>
+    /// Retrieves a customer's wallet for cross-service wallet management scenarios.
+    /// </summary>
     public async Task<GetWalletByCustomerIdGrpcResponse> GetWalletByCustomerIdAsync(
         GetWalletByCustomerIdGrpcRequest request,
         CancellationToken cancellationToken)
@@ -34,6 +40,9 @@ public class WalletGrpcService : IWalletGrpcService
         }
     }
 
+    /// <summary>
+    /// Retrieves wallet transactions for synchronous gRPC clients that need wallet history.
+    /// </summary>
     public async Task<GetWalletTransactionsByWalletIdGrpcResponse> GetWalletTransactionsByWalletIdAsync(
         GetWalletTransactionsByWalletIdGrpcRequest request,
         CancellationToken cancellationToken)

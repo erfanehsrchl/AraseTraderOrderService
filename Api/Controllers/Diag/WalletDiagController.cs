@@ -8,6 +8,9 @@ namespace Api.Controllers.Diag;
 
 [ApiController]
 [Route(DiagWalletRoutes.Base)]
+/// <summary>
+/// Exposes read-only diagnostic wallet endpoints backed by the application wallet query service.
+/// </summary>
 public class WalletDiagController : ControllerBase
 {
     private readonly IWalletService _walletService;
@@ -17,6 +20,9 @@ public class WalletDiagController : ControllerBase
         _walletService = walletService;
     }
 
+    /// <summary>
+    /// Returns the wallet assigned to a customer for diagnostics and cross-service verification.
+    /// </summary>
     [HttpGet(DiagWalletRoutes.GetByCustomerId)]
     public async Task<ActionResult<GetWalletByCustomerIdOutDto>> GetByCustomerId(
         [FromRoute] GetWalletByCustomerIdInVm request,
@@ -33,6 +39,9 @@ public class WalletDiagController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Returns wallet transaction history for diagnostics, ordered by the wallet query use case.
+    /// </summary>
     [HttpGet(DiagWalletRoutes.GetTransactionsByWalletId)]
     public async Task<ActionResult<GetWalletTransactionsByWalletIdOutDto>> GetTransactionsByWalletId(
         [FromRoute] GetWalletTransactionsByWalletIdInVm request,

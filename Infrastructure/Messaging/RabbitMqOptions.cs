@@ -1,5 +1,8 @@
 namespace Infrastructure.Messaging;
 
+/// <summary>
+/// Provides RabbitMQ topology and connection settings for the CreateOrderEvent consumer and its dead-letter queue.
+/// </summary>
 public class RabbitMqOptions
 {
     public const string SectionName = "RabbitMq";

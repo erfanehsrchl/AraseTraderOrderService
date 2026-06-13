@@ -1,5 +1,8 @@
 namespace Domain.Entities;
 
+/// <summary>
+/// Represents the customer's financial balance used by order processing and protected by distributed locking.
+/// </summary>
 public class Wallet
 {
     public long Id { get; set; }

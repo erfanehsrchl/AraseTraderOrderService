@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
+/// <summary>
+/// Implements wallet read use cases for HTTP diagnostics and gRPC clients without exposing EF Core entities.
+/// </summary>
 public class WalletService : IWalletService
 {
     private readonly AppDbContext _dbContext;
@@ -15,6 +18,9 @@ public class WalletService : IWalletService
         _dbContext = dbContext;
     }
 
+    /// <summary>
+    /// Returns the wallet associated with a customer for wallet management and cross-service verification.
+    /// </summary>
     public async Task<GetWalletByCustomerIdOutDto> GetWalletByCustomerIdAsync(
         long customerId,
         CancellationToken cancellationToken)
@@ -28,6 +34,9 @@ public class WalletService : IWalletService
             ?? throw new InvalidOperationException("Wallet was not found.");
     }
 
+    /// <summary>
+    /// Returns wallet transactions in descending creation order for balance audit and support workflows.
+    /// </summary>
     public async Task<GetWalletTransactionsByWalletIdOutDto> GetWalletTransactionsByWalletIdAsync(
         long walletId,
         CancellationToken cancellationToken)

@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
+/// <summary>
+/// Implements order application use cases using EF Core while keeping transport concerns outside the application boundary.
+/// </summary>
 public class OrderService : IOrderService
 {
     private const string OrderRegisteredMessage = "Order has been registered and is pending wallet processing.";
@@ -18,6 +21,9 @@ public class OrderService : IOrderService
         _dbContext = dbContext;
     }
 
+    /// <summary>
+    /// Persists a pending order using TrackingId idempotency so RabbitMQ redeliveries and repeated HTTP calls do not duplicate orders.
+    /// </summary>
     public async Task<AddOrderOutDto> AddOrderAsync(AddOrderInDto input, CancellationToken cancellationToken)
     {
         var existingOrder = await _dbContext.Orders
@@ -50,6 +56,9 @@ public class OrderService : IOrderService
         return order.Adapt<AddOrderOutDto>();
     }
 
+    /// <summary>
+    /// Reads a single order by TrackingId for diagnostic and gRPC query scenarios.
+    /// </summary>
     public async Task<GetOrderByTrackingIdOutDto> GetOrderByTrackingIdAsync(
         Guid trackingId,
         CancellationToken cancellationToken)

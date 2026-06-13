@@ -1,5 +1,8 @@
 namespace Domain.Entities;
 
+/// <summary>
+/// Represents a synchronized trading customer and the aggregate root for the customer's orders and wallet.
+/// </summary>
 public class Customer
 {
     public long Id { get; set; }

@@ -4,6 +4,9 @@ using Infrastructure.ExternalServices.Models;
 
 namespace Infrastructure.ExternalServices;
 
+/// <summary>
+/// Reads customers from the external Arase Trader API as the infrastructure adapter for Customer Synchronization.
+/// </summary>
 public class AraseCustomerClient : IAraseCustomerClient
 {
     private readonly HttpClient _httpClient;
@@ -17,6 +20,9 @@ public class AraseCustomerClient : IAraseCustomerClient
         _authTokenClient = authTokenClient;
     }
 
+    /// <summary>
+    /// Retrieves external customers using the cached authentication token managed by the token client.
+    /// </summary>
     public async Task<IReadOnlyCollection<AraseCustomerDto>> GetCustomersAsync(CancellationToken cancellationToken)
     {
         var token = await _authTokenClient.GetTokenAsync(cancellationToken);

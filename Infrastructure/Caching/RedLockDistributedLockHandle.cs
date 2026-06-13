@@ -3,6 +3,9 @@ using RedLockNet;
 
 namespace Infrastructure.Caching;
 
+/// <summary>
+/// Wraps a RedLock.net lock so application code can release distributed locks through a stable abstraction.
+/// </summary>
 public class RedLockDistributedLockHandle : IDistributedLockHandle
 {
     private readonly IRedLock _redLock;

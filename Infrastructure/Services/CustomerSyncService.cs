@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
+/// <summary>
+/// Coordinates Customer Synchronization by reading the external Arase Trader API and upserting local customers and wallets.
+/// </summary>
 public class CustomerSyncService : ICustomerSyncService
 {
     private readonly AppDbContext _dbContext;
@@ -21,6 +24,9 @@ public class CustomerSyncService : ICustomerSyncService
         _customerClient = customerClient;
     }
 
+    /// <summary>
+    /// Imports customers by NationalCode, updates existing profile data, and creates missing zero-balance wallets.
+    /// </summary>
     public async Task<CustomerSyncOutDto> SyncAsync(CancellationToken cancellationToken)
     {
         var externalCustomers = await _customerClient.GetCustomersAsync(cancellationToken);
